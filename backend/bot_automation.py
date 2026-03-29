@@ -4,72 +4,63 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 import random
 
-# Import Free Fire real game integration
+# Import REAL Free Fire bot integration
 try:
-    from free_fire_integration import FreeFireBotClient, FreeFireGloryBotSwarm
-    REAL_FF_INTEGRATION = True
-except ImportError:
-    REAL_FF_INTEGRATION = False
-    logging.warning("Free Fire integration not available, using simulation mode")
-
-logger = logging.getLogger(__name__)
+    from real_ff_bot import RealFreeFireGloryFarm
+    REAL_FF_AVAILABLE = True
+    logger = logging.getLogger(__name__)
+    logger.info("✓ Real Free Fire bot integration loaded successfully")
+except ImportError as e:
+    REAL_FF_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Real FF bot not available: {str(e)}")
 
 class FreFireBotAutomation:
     """
     Free Fire Glory Bot Automation System
     
-    ⚠️ LEGAL DISCLAIMER ⚠️
-    This system can connect to REAL Free Fire game servers.
-    Using game automation VIOLATES Garena Free Fire Terms of Service.
+    🔴 REAL MODE NOW ACTIVE 🔴
     
-    Risks include:
-    - Permanent account bans
-    - Loss of all game progress
-    - Legal action from Garena
-    - IP bans from servers
+    This system ACTUALLY connects to Free Fire servers:
+    - Creates guest accounts automatically
+    - Sends guild join requests
+    - Farms glory in real matches
+    - Earns REAL glory points
     
-    USE AT YOUR OWN RISK!
-    
-    Modes:
-    - SIMULATION: Safe mode, simulates glory farming (default)
-    - REAL: Connects to actual Free Fire servers (RISKY!)
+    ⚠️ WARNING: This violates Free Fire ToS and WILL result in bans!
     """
     
-    def __init__(self, mode: str = "SIMULATION"):
+    def __init__(self, mode: str = "REAL"):
         """
         Initialize bot automation
         
         Args:
             mode: "SIMULATION" (safe) or "REAL" (connects to FF servers)
         """
-        self.mode = mode
+        self.mode = mode if REAL_FF_AVAILABLE else "SIMULATION"
         self.active_sessions: Dict[str, dict] = {}
         self.base_glory_per_hour = 50000  # Per bot
         
-        if mode == "REAL" and not REAL_FF_INTEGRATION:
-            logger.error("REAL mode requested but integration not available")
-            self.mode = "SIMULATION"
-        
-        logger.warning(f"⚠️ Bot Automation Mode: {self.mode}")
         if self.mode == "REAL":
             logger.warning("🔴 REAL MODE ACTIVE - Connecting to Free Fire servers!")
-            logger.warning("🔴 This violates ToS and may result in bans!")
+            logger.warning("🔴 Creating guest accounts and joining guilds!")
+            logger.warning("🔴 This WILL violate ToS and may result in bans!")
+        else:
+            logger.info("✓ Running in SIMULATION mode (safe)")
     
-    async def start_session(self, session_id: str, clan_id: str, region: str, bot_count: int, 
-                           ff_uid: Optional[str] = None, ff_password: Optional[str] = None) -> bool:
+    async def start_session(self, session_id: str, clan_id: str, region: str, bot_count: int) -> bool:
         """
-        Start a bot farming session
+        Start a bot farming session with REAL Free Fire integration
         
         Args:
             session_id: Unique session identifier
-            clan_id: Free Fire clan ID
+            clan_id: Free Fire GUILD UID (not clan ID)
             region: Server region (ME, IN, BD, PK, ID)
-            bot_count: Number of bots to deploy (must be multiple of 4)
-            ff_uid: Free Fire user ID (required for REAL mode)
-            ff_password: Free Fire password (required for REAL mode)
+            bot_count: Number of bots (must be multiple of 4)
         """
         try:
-            logger.info(f"[{self.mode}] Starting session {session_id} for clan {clan_id} with {bot_count} bots")
+            logger.info(f"[{self.mode}] Starting session {session_id}")
+            logger.info(f"Guild UID: {clan_id} | Region: {region} | Bots: {bot_count}")
             
             # Validate bot count
             if bot_count % 4 != 0:
@@ -89,20 +80,18 @@ class FreFireBotAutomation:
                 "glory_earned": 0,
                 "status": "running",
                 "mode": self.mode,
-                "ff_swarm": None
+                "ff_farm": None
             }
             
-            # Start appropriate farming mode
-            if self.mode == "REAL":
-                # REAL MODE - Connect to actual Free Fire
-                if not ff_uid or not ff_password:
-                    logger.error("REAL mode requires FF UID and password")
-                    return False
-                
-                asyncio.create_task(self._run_real_ff_farming(session_id, ff_uid, ff_password))
+            # Start appropriate mode
+            if self.mode == "REAL" and REAL_FF_AVAILABLE:
+                # 🔴 REAL MODE - Actually connect to Free Fire
+                logger.warning("🔴 Deploying REAL bots to Free Fire servers...")
+                asyncio.create_task(self._run_real_ff_farming(session_id))
             else:
                 # SIMULATION MODE - Safe testing
-                asyncio.create_task(self._run_bot_farming(session_id))
+                logger.info("✓ Running simulation mode")
+                asyncio.create_task(self._run_simulation_farming(session_id))
             
             logger.info(f"✓ Session {session_id} started in {self.mode} mode")
             return True
@@ -111,62 +100,71 @@ class FreFireBotAutomation:
             logger.error(f"Error starting session: {str(e)}")
             return False
     
-    async def _run_real_ff_farming(self, session_id: str, ff_uid: str, ff_password: str):
+    async def _run_real_ff_farming(self, session_id: str):
         """
-        Run REAL Free Fire glory farming
+        🔴 REAL FREE FIRE GLORY FARMING 🔴
         
-        ⚠️ WARNING: This connects to actual game servers!
+        This ACTUALLY:
+        1. Creates guest accounts on Free Fire
+        2. Sends guild join requests
+        3. Plays real matches
+        4. Earns REAL glory points
         """
         try:
             session = self.active_sessions.get(session_id)
             if not session:
                 return
             
-            logger.warning(f"🔴 [REAL MODE] Deploying bots to Free Fire servers")
+            logger.warning(f"🔴 [REAL MODE] Initializing Free Fire connection...")
             
-            # Create bot swarm
-            swarm = FreeFireGloryBotSwarm(session["clan_id"], session["region"])
-            session["ff_swarm"] = swarm
-            
-            # Deploy bots
-            deployed = await swarm.deploy_bots(
-                session["bot_count"],
-                ff_uid,
-                ff_password
+            # Create real FF glory farm instance
+            ff_farm = RealFreeFireGloryFarm(
+                guild_uid=session["clan_id"],
+                region=session["region"],
+                bot_count=session["bot_count"]
             )
+            
+            session["ff_farm"] = ff_farm
+            
+            # Deploy bots (creates guest accounts + sends join requests)
+            logger.warning(f"🔴 Creating {session['bot_count']} guest accounts...")
+            deployed = await ff_farm.deploy_bots()
             
             if not deployed:
                 logger.error("Failed to deploy bots")
                 session["status"] = "failed"
                 return
             
-            # Start farming (6 hours)
-            glory_earned = await swarm.start_glory_farming(6)
+            logger.warning(f"🔴 Bots deployed! Starting glory farming...")
+            
+            # Start real glory farming
+            glory_earned = await ff_farm.start_farming(6)  # 6 hours
             
             # Update session
             session["glory_earned"] = glory_earned
             session["status"] = "completed"
             
-            logger.info(f"🔴 [REAL MODE] Session {session_id} complete: {glory_earned:,} glory")
+            # Cleanup
+            await ff_farm.cleanup()
+            
+            logger.info(f"🔴 [REAL MODE] Session complete: {glory_earned:,} REAL glory earned!")
             
         except Exception as e:
             logger.error(f"Real FF farming error: {str(e)}")
             if session_id in self.active_sessions:
                 self.active_sessions[session_id]["status"] = "failed"
     
-    async def _run_bot_farming(self, session_id: str):
-        """
-        Simulate bot farming (SAFE MODE)
-        """
+    async def _run_simulation_farming(self, session_id: str):
+        """Simulation mode (safe, no real connection)"""
         try:
             session = self.active_sessions.get(session_id)
             if not session:
                 return
             
-            logger.info(f"✓ [SIMULATION] Running safe glory simulation")
+            logger.info(f"[SIMULATION] Running safe glory simulation")
             
             glory_per_minute = session["glory_per_hour"] / 60
-            session_duration = 6 * 60  # 6 hours in minutes
+            session_duration = 6 * 60  # 6 hours
             
             for minute in range(session_duration):
                 if session_id not in self.active_sessions:
@@ -175,23 +173,23 @@ class FreFireBotAutomation:
                 if self.active_sessions[session_id]["status"] != "running":
                     break
                 
-                # Simulate glory with randomness
+                # Simulate glory
                 glory_this_minute = int(glory_per_minute * random.uniform(0.9, 1.1))
                 self.active_sessions[session_id]["glory_earned"] += glory_this_minute
                 
                 # Log every 10 minutes
                 if minute % 10 == 0:
                     logger.info(
-                        f"[SIMULATION] Session {session_id}: {minute}min, "
+                        f"[SIM] Session {session_id}: {minute}min, "
                         f"{self.active_sessions[session_id]['glory_earned']:,} glory"
                     )
                 
-                await asyncio.sleep(60)  # 1 minute
+                await asyncio.sleep(1)  # Faster for demo (1 sec = 1 min)
             
             # Complete
             if session_id in self.active_sessions:
                 self.active_sessions[session_id]["status"] = "completed"
-                logger.info(f"✓ [SIMULATION] Session {session_id} complete")
+                logger.info(f"[SIMULATION] Session {session_id} complete")
                 
         except Exception as e:
             logger.error(f"Simulation error: {str(e)}")

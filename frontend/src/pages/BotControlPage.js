@@ -142,15 +142,18 @@ const BotControlPage = () => {
               <form onSubmit={handleStartSession} className="space-y-6">
                 {/* Clan ID */}
                 <div>
-                  <Label htmlFor="clanId" className="text-slate-300">Clan ID *</Label>
+                  <Label htmlFor="clanId" className="text-slate-300">Guild UID * (Not Clan ID)</Label>
                   <Input
                     id="clanId"
-                    placeholder="Enter your Free Fire clan ID"
+                    placeholder="Enter your Free Fire GUILD UID"
                     value={formData.clanId}
                     onChange={(e) => setFormData({ ...formData, clanId: e.target.value })}
                     className="bg-slate-800 border-slate-700 text-white"
                     required
                   />
+                  <p className="text-sm text-slate-400 mt-2">
+                    ⚠️ Enter GUILD UID (not clan name). Bots will auto-request to join.
+                  </p>
                 </div>
 
                 {/* Region */}
