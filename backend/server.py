@@ -15,11 +15,13 @@ from models import (
     TransactionCreate, Transaction, TransactionType, TransactionStatus,
     AdminCreditGrant, PaymentVerification
 )
+from bot_models import BotCredential, BotCredentialCreate, BotCredentialUpdate
 from auth import (
     hash_password, verify_password, create_access_token,
     get_current_user, get_admin_user
 )
 from bot_automation import bot_automation
+from real_bot_controller import RealFFBotController, encrypt_password, decrypt_password
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -33,6 +35,7 @@ db = client[os.environ['DB_NAME']]
 users_collection = db.users
 sessions_collection = db.bot_sessions
 transactions_collection = db.transactions
+bot_credentials_collection = db.bot_credentials  # New collection
 
 # Create the main app
 app = FastAPI(title="FF Glory Bot API")
@@ -489,6 +492,140 @@ async def get_admin_stats(current_user: dict = Depends(get_admin_user)):
         "activeSessions": active_sessions,
         "totalGlory": total_glory
     }
+
+# ============================================================================
+# BOT CREDENTIALS MANAGEMENT (ADMIN ONLY)
+# ============================================================================
+
+@api_router.post("/admin/bots/add", response_model=dict)
+async def add_bot_credential(bot_data: BotCredentialCreate, current_user: dict = Depends(get_admin_user)):
+    """Add new bot account credentials (admin only)"""
+    try:
+        # Test login with credentials first
+        bot_controller = RealFFBotController(bot_data.email, bot_data.password, bot_data.region)
+        login_result = await bot_controller.login()
+        await bot_controller.cleanup()
+        
+        if not login_result.get("success"):
+            raise HTTPException(status_code=400, detail="Invalid credentials or login failed")
+        
+        # Store encrypted credentials
+        bot_doc = {
+            "_id": str(uuid.uuid4()),
+            "email": bot_data.email,
+            "password": encrypt_password(bot_data.password),
+            "uid": login_result.get("uid"),
+            "region": bot_data.region,
+            "status": "active",
+            "current_guild": None,
+            "last_login": datetime.utcnow().isoformat(),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        await bot_credentials_collection.insert_one(bot_doc)
+        
+        logger.info(f"Bot credential added: {bot_data.email} (UID: {login_result.get('uid')})")
+        
+        return {
+            "success": True,
+            "message": "Bot credentials added successfully",
+            "bot_id": bot_doc["_id"],
+            "uid": login_result.get("uid")
+        }
+        
+    except Exception as e:
+        logger.error(f"Error adding bot credentials: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/bots", response_model=List[dict])
+async def get_all_bots(current_user: dict = Depends(get_admin_user)):
+    """Get all bot credentials (admin only)"""
+    bots = await bot_credentials_collection.find({}).to_list(1000)
+    
+    # Don't send passwords to frontend
+    for bot in bots:
+        bot["id"] = bot.pop("_id")
+        bot.pop("password", None)  # Remove password from response
+    
+    return bots
+
+@api_router.delete("/admin/bots/{bot_id}", response_model=dict)
+async def delete_bot_credential(bot_id: str, current_user: dict = Depends(get_admin_user)):
+    """Delete bot credentials (admin only)"""
+    result = await bot_credentials_collection.delete_one({"_id": bot_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    
+    return {"success": True, "message": "Bot credentials deleted"}
+
+@api_router.post("/admin/bots/{bot_id}/test", response_model=dict)
+async def test_bot_login(bot_id: str, current_user: dict = Depends(get_admin_user)):
+    """Test bot login and get account info (admin only)"""
+    bot = await bot_credentials_collection.find_one({"_id": bot_id})
+    
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    
+    try:
+        # Decrypt password and test login
+        password = decrypt_password(bot["password"])
+        bot_controller = RealFFBotController(bot["email"], password, bot["region"])
+        
+        login_result = await bot_controller.login()
+        
+        if login_result.get("success"):
+            # Update last login time
+            await bot_credentials_collection.update_one(
+                {"_id": bot_id},
+                {"$set": {"last_login": datetime.utcnow().isoformat()}}
+            )
+        
+        await bot_controller.cleanup()
+        
+        return login_result
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@api_router.post("/admin/bots/{bot_id}/join-guild", response_model=dict)
+async def bot_join_guild(bot_id: str, guild_uid: str, current_user: dict = Depends(get_admin_user)):
+    """Make bot join a specific guild (admin only)"""
+    bot = await bot_credentials_collection.find_one({"_id": bot_id})
+    
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    
+    try:
+        password = decrypt_password(bot["password"])
+        bot_controller = RealFFBotController(bot["email"], password, bot["region"])
+        
+        # Login and join guild
+        await bot_controller.login()
+        joined = await bot_controller.join_guild(guild_uid)
+        
+        if joined:
+            # Update bot's current guild
+            await bot_credentials_collection.update_one(
+                {"_id": bot_id},
+                {"$set": {"current_guild": guild_uid}}
+            )
+        
+        await bot_controller.cleanup()
+        
+        return {
+            "success": joined,
+            "message": f"Bot joined guild {guild_uid}" if joined else "Failed to join guild"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 # ============================================================================
 # HEALTH CHECK
