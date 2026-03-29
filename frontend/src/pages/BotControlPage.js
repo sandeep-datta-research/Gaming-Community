@@ -17,10 +17,11 @@ import {
 } from 'lucide-react';
 import { regions } from '../mockData';
 import { useToast } from '../hooks/use-toast';
+import { botSessionsAPI } from '../services/api';
 
 const BotControlPage = () => {
   const navigate = useNavigate();
-  const { user, updateCredits } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     clanId: '',
@@ -63,16 +64,25 @@ const BotControlPage = () => {
 
     setIsStarting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      updateCredits(-creditsNeeded);
+    try {
+      await botSessionsAPI.start(formData.clanId, formData.region, formData.botCount);
+      await refreshUser();
+      
       toast({
         title: 'Session Started!',
         description: `${formData.botCount} bots are now farming glory for your clan`,
       });
+      
+      setTimeout(() => navigate('/dashboard'), 1500);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to start session',
+        variant: 'destructive'
+      });
+    } finally {
       setIsStarting(false);
-      navigate('/dashboard');
-    }, 1500);
+    }
   };
 
   return (

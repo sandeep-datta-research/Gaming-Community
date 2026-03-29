@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { pricingPlans } from '../mockData';
 import { useToast } from '../hooks/use-toast';
+import { transactionsAPI } from '../services/api';
 
 const BuyCreditsPage = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const BuyCreditsPage = () => {
     setPaymentStep('payment');
   };
 
-  const handlePaymentSubmit = (e) => {
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     if (!transactionId) {
       toast({
@@ -56,17 +57,24 @@ const BuyCreditsPage = () => {
       return;
     }
 
-    // In real app, this would verify payment with backend
-    // For demo, we'll just add credits immediately
-    updateCredits(selectedPlan.credits);
-    toast({
-      title: 'Payment Successful!',
-      description: `${selectedPlan.credits} credits added to your account`
-    });
-    
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 1500);
+    try {
+      await transactionsAPI.createPurchase(selectedPlan.id, transactionId);
+      
+      toast({
+        title: 'Payment Submitted!',
+        description: 'Your payment is pending admin verification. Credits will be added once approved.'
+      });
+      
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to submit payment',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (

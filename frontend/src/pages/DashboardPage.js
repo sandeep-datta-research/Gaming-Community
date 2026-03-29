@@ -16,19 +16,38 @@ import {
   Home,
   ShieldCheck
 } from 'lucide-react';
-import { mockBotSessions, mockTransactions } from '../mockData';
+import { botSessionsAPI, transactionsAPI } from '../services/api';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, refreshUser } = useAuth();
   const [activeSessions, setActiveSessions] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load mock data
-    setActiveSessions(mockBotSessions.filter(s => s.status === 'running'));
-    setRecentTransactions(mockTransactions.slice(0, 5));
+    loadData();
+    // Refresh user data
+    refreshUser();
+    // Poll for updates every 30 seconds
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const loadData = async () => {
+    try {
+      const [sessions, transactions] = await Promise.all([
+        botSessionsAPI.getAll(),
+        transactionsAPI.getAll()
+      ]);
+      setActiveSessions(sessions.filter(s => s.status === 'running'));
+      setRecentTransactions(transactions.slice(0, 5));
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();

@@ -5,6 +5,8 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { 
   Bot, 
   ArrowLeft,
@@ -12,13 +14,17 @@ import {
   Activity,
   DollarSign,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
-import { mockUsers, mockBotSessions, mockTransactions } from '../mockData';
+import { adminAPI } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const AdminPage = () => {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const [allUsers, setAllUsers] = useState([]);
   const [allSessions, setAllSessions] = useState([]);
   const [allTransactions, setAllTransactions] = useState([]);
@@ -28,32 +34,72 @@ const AdminPage = () => {
     activeSessions: 0,
     totalGlory: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [grantCreditsForm, setGrantCreditsForm] = useState({ userId: '', credits: 0 });
 
   useEffect(() => {
     if (!isAdmin) {
       navigate('/dashboard');
       return;
     }
-
-    // Load mock data
-    setAllUsers(mockUsers);
-    setAllSessions(mockBotSessions);
-    setAllTransactions(mockTransactions);
-    
-    // Calculate stats
-    const revenue = mockTransactions
-      .filter(t => t.type === 'credit_purchase')
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
-    
-    const glory = mockBotSessions.reduce((sum, s) => sum + s.gloryEarned, 0);
-    
-    setStats({
-      totalUsers: mockUsers.length,
-      totalRevenue: revenue,
-      activeSessions: mockBotSessions.filter(s => s.status === 'running').length,
-      totalGlory: glory
-    });
+    loadData();
   }, [isAdmin, navigate]);
+
+  const loadData = async () => {
+    try {
+      const [users, sessions, transactions, statsData] = await Promise.all([
+        adminAPI.getUsers(),
+        adminAPI.getSessions(),
+        adminAPI.getTransactions(),
+        adminAPI.getStats()
+      ]);
+      
+      setAllUsers(users);
+      setAllSessions(sessions);
+      setAllTransactions(transactions);
+      setStats(statsData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading admin data:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleGrantCredits = async (e) => {
+    e.preventDefault();
+    try {
+      await adminAPI.grantCredits(grantCreditsForm.userId, parseInt(grantCreditsForm.credits), 'Admin manual grant');
+      toast({
+        title: 'Credits Granted',
+        description: `Successfully granted ${grantCreditsForm.credits} credits`
+      });
+      setGrantCreditsForm({ userId: '', credits: 0 });
+      loadData();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to grant credits',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleVerifyPayment = async (transactionId, status) => {
+    try {
+      await adminAPI.verifyPayment(transactionId, status);
+      toast({
+        title: status === 'approve' ? 'Payment Approved' : 'Payment Rejected',
+        description: status === 'approve' ? 'Credits have been added to user account' : 'Payment has been rejected'
+      });
+      loadData();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.detail || 'Failed to verify payment',
+        variant: 'destructive'
+      });
+    }
+  };
 
   if (!isAdmin || !user) {
     return null;
@@ -138,7 +184,8 @@ const AdminPage = () => {
             <TabsList className="bg-slate-900 border border-slate-800">
               <TabsTrigger value="users" className="data-[state=active]:bg-orange-600">Users</TabsTrigger>
               <TabsTrigger value="sessions" className="data-[state=active]:bg-orange-600">Sessions</TabsTrigger>
-              <TabsTrigger value="transactions" className="data-[state=active]:bg-orange-600">Transactions</TabsTrigger>
+              <TabsTrigger value="transactions" className="data-[state=active]:bg-orange-600">Payments</TabsTrigger>
+              <TabsTrigger value="grant" className="data-[state=active]:bg-purple-600">Grant Credits</TabsTrigger>
             </TabsList>
 
             {/* Users Tab */}
@@ -231,7 +278,7 @@ const AdminPage = () => {
               <Card className="bg-slate-900/50 border-slate-800">
                 <CardHeader>
                   <CardTitle className="text-white">All Transactions</CardTitle>
-                  <CardDescription className="text-slate-400">Credit purchases and usage</CardDescription>
+                  <CardDescription className="text-slate-400">Credit purchases and usage - Verify pending payments</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -239,15 +286,34 @@ const AdminPage = () => {
                       <div key={txn.id} className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <div className="font-semibold text-white">
-                              {txn.type === 'credit_purchase' ? 'Credit Purchase' : 'Credit Used'}
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold text-white">
+                                {txn.type === 'credit_purchase' ? 'Credit Purchase' : txn.type === 'admin_credit' ? 'Admin Grant' : 'Credit Used'}
+                              </span>
+                              {txn.status === 'pending' && (
+                                <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/50">
+                                  Pending Verification
+                                </Badge>
+                              )}
+                              {txn.status === 'completed' && (
+                                <Badge className="bg-green-600/20 text-green-400 border-green-600/50">
+                                  Completed
+                                </Badge>
+                              )}
+                              {txn.status === 'failed' && (
+                                <Badge className="bg-red-600/20 text-red-400 border-red-600/50">
+                                  Rejected
+                                </Badge>
+                              )}
                             </div>
                             <div className="text-sm text-slate-400">
                               {new Date(txn.timestamp).toLocaleString()}
                             </div>
                             {txn.paymentMethod && (
                               <div className="text-sm text-slate-400 mt-1">
-                                Payment: {txn.paymentMethod} ({txn.upiId})
+                                Payment: {txn.paymentMethod} | UPI: {txn.upiId}
+                                <br />
+                                Transaction ID: {txn.upiTransactionId}
                               </div>
                             )}
                           </div>
@@ -258,10 +324,97 @@ const AdminPage = () => {
                             <div className={`font-semibold ${txn.credits > 0 ? 'text-green-400' : 'text-orange-400'}`}>
                               {txn.credits > 0 ? '+' : ''}{txn.credits} Credits
                             </div>
+                            {txn.status === 'pending' && (
+                              <div className="flex space-x-2 mt-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  onClick={() => handleVerifyPayment(txn.id, 'approve')}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleVerifyPayment(txn.id, 'reject')}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Grant Credits Tab */}
+            <TabsContent value="grant">
+              <Card className="bg-slate-900/50 border-slate-800">
+                <CardHeader>
+                  <CardTitle className="text-white">Grant Credits to User</CardTitle>
+                  <CardDescription className="text-slate-400">Manually add credits to any user account</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleGrantCredits} className="space-y-4">
+                    <div>
+                      <Label htmlFor="userId" className="text-slate-300">User ID</Label>
+                      <Input
+                        id="userId"
+                        placeholder="Enter user ID"
+                        value={grantCreditsForm.userId}
+                        onChange={(e) => setGrantCreditsForm({ ...grantCreditsForm, userId: e.target.value })}
+                        className="bg-slate-800 border-slate-700 text-white"
+                        required
+                      />
+                      <p className="text-sm text-slate-400 mt-2">
+                        Select from users list above or paste user ID
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="credits" className="text-slate-300">Credits Amount</Label>
+                      <Input
+                        id="credits"
+                        type="number"
+                        placeholder="Enter number of credits"
+                        value={grantCreditsForm.credits}
+                        onChange={(e) => setGrantCreditsForm({ ...grantCreditsForm, credits: e.target.value })}
+                        className="bg-slate-800 border-slate-700 text-white"
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                      Grant Credits
+                    </Button>
+                  </form>
+
+                  <div className="mt-6">
+                    <h3 className="text-white font-semibold mb-3">Quick Select Users</h3>
+                    <div className="space-y-2">
+                      {allUsers.map((u) => (
+                        <div key={u.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
+                          <div>
+                            <div className="text-white font-medium">{u.name}</div>
+                            <div className="text-sm text-slate-400">{u.email}</div>
+                            <div className="text-xs text-slate-500">ID: {u.id}</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-slate-700 text-slate-300"
+                            onClick={() => setGrantCreditsForm({ ...grantCreditsForm, userId: u.id })}
+                          >
+                            Select
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
