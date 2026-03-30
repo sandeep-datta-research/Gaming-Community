@@ -1,148 +1,200 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Bot } from 'lucide-react';
-import { useToast } from '../hooks/use-toast';
+import { GameController, Eye, EyeSlash, CircleNotch } from '@phosphor-icons/react';
 
-const RegisterPage = () => {
-  const navigate = useNavigate();
-  const { register } = useAuth();
-  const { toast } = useToast();
+export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match',
-        variant: 'destructive'
-      });
+      setError('Passwords do not match');
       return;
     }
-
+    
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    
+    if (formData.username.length < 3) {
+      setError('Username must be at least 3 characters');
+      return;
+    }
+    
     setLoading(true);
-    const result = register(formData.name, formData.email, formData.password);
+    
+    const result = await register(
+      formData.name,
+      formData.email,
+      formData.username,
+      formData.password
+    );
     
     if (result.success) {
-      toast({
-        title: 'Registration Successful',
-        description: 'Welcome to Glory Bot!'
-      });
       navigate('/dashboard');
     } else {
-      toast({
-        title: 'Registration Failed',
-        description: result.error,
-        variant: 'destructive'
-      });
+      setError(result.error);
     }
     
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-obsidian flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Bot className="w-10 h-10 text-orange-500" />
-            <span className="text-2xl font-bold text-white">Glory Bot</span>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Get Started</h1>
-          <p className="text-slate-400">Create your account and start farming glory</p>
+          <Link to="/" className="inline-flex items-center gap-2">
+            <GameController size={40} weight="duotone" className="text-volt" />
+            <span className="font-display text-3xl">GAMEVERSE</span>
+          </Link>
         </div>
 
-        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white">Register</CardTitle>
-            <CardDescription className="text-slate-400">
-              Fill in your details to create an account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name" className="text-slate-300">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="John Doe"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email" className="text-slate-300">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="password" className="text-slate-300">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="confirmPassword" className="text-slate-300">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                  required
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                disabled={loading}
-              >
-                {loading ? 'Creating Account...' : 'Create Account'}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-slate-400">
-                Already have an account?{' '}
-                <Link to="/login" className="text-orange-500 hover:text-orange-400">
-                  Login
-                </Link>
-              </p>
+        {/* Register Form */}
+        <div className="bg-surface border border-white/10 p-8">
+          <h1 className="font-display text-2xl text-center mb-6">CREATE ACCOUNT</h1>
+          
+          {error && (
+            <div className="bg-blaze/10 border border-blaze/30 text-blaze px-4 py-3 mb-6 text-sm" data-testid="register-error">
+              {error}
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-secondary mb-2">
+                Display Name
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                data-testid="register-name"
+                className="w-full px-4 py-3 bg-obsidian border border-white/20 focus:ring-2 focus:ring-volt focus:border-transparent"
+                placeholder="Your display name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-secondary mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                data-testid="register-username"
+                className="w-full px-4 py-3 bg-obsidian border border-white/20 focus:ring-2 focus:ring-volt focus:border-transparent"
+                placeholder="Choose a unique username"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-secondary mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                data-testid="register-email"
+                className="w-full px-4 py-3 bg-obsidian border border-white/20 focus:ring-2 focus:ring-volt focus:border-transparent"
+                placeholder="Enter your email"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-secondary mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  data-testid="register-password"
+                  className="w-full px-4 py-3 pr-12 bg-obsidian border border-white/20 focus:ring-2 focus:ring-volt focus:border-transparent"
+                  placeholder="Create a password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-pure"
+                >
+                  {showPassword ? <EyeSlash size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-secondary mb-2">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                data-testid="register-confirm-password"
+                className="w-full px-4 py-3 bg-obsidian border border-white/20 focus:ring-2 focus:ring-volt focus:border-transparent"
+                placeholder="Confirm your password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              data-testid="register-submit"
+              className="w-full btn-primary py-3 rounded-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <CircleNotch size={20} className="animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                'Create Account'
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center text-sm text-secondary">
+            Already have an account?{' '}
+            <Link to="/login" className="text-volt hover:underline" data-testid="register-login-link">
+              Sign in
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-export default RegisterPage;
+}

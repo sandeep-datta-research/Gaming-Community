@@ -1,121 +1,93 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authAPI, formatApiErrorDetail } from '../services/api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const AuthContext = createContext(null);
 
-const AuthContext = createContext();
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-};
-
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
+  // null = checking, false = not authenticated, object = authenticated
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check localStorage for saved user and token
-    const savedToken = localStorage.getItem('ffglory_token');
-    const savedUser = localStorage.getItem('ffglory_user');
-    
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-      // Set default axios header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+  const checkAuth = useCallback(async () => {
+    try {
+      const { data } = await authAPI.getMe();
+      setUser(data);
+    } catch (error) {
+      // Try to refresh token
+      try {
+        await authAPI.refresh();
+        const { data } = await authAPI.getMe();
+        setUser(data);
+      } catch {
+        setUser(false);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post(`${API}/auth/login`, { email, password });
-      const { user: userData, access_token } = response.data;
-      
-      setUser(userData);
-      setToken(access_token);
-      localStorage.setItem('ffglory_user', JSON.stringify(userData));
-      localStorage.setItem('ffglory_token', access_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-      
-      return { success: true, user: userData };
+      const { data } = await authAPI.login({ email, password });
+      setUser(data);
+      return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
       return { 
         success: false, 
-        error: error.response?.data?.detail || 'Login failed' 
+        error: formatApiErrorDetail(error.response?.data?.detail) || error.message 
       };
     }
   };
 
-  const register = async (name, email, password) => {
+  const register = async (name, email, username, password) => {
     try {
-      const response = await axios.post(`${API}/auth/register`, { name, email, password });
-      const { user: userData, access_token } = response.data;
-      
-      setUser(userData);
-      setToken(access_token);
-      localStorage.setItem('ffglory_user', JSON.stringify(userData));
-      localStorage.setItem('ffglory_token', access_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-      
-      return { success: true, user: userData };
+      const { data } = await authAPI.register({ name, email, username, password });
+      setUser(data);
+      return { success: true };
     } catch (error) {
-      console.error('Registration error:', error);
       return { 
         success: false, 
-        error: error.response?.data?.detail || 'Registration failed' 
+        error: formatApiErrorDetail(error.response?.data?.detail) || error.message 
       };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('ffglory_user');
-    localStorage.removeItem('ffglory_token');
-    delete axios.defaults.headers.common['Authorization'];
-  };
-
-  const refreshUser = async () => {
-    if (!token) return;
-    
+  const logout = async () => {
     try {
-      const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setUser(response.data);
-      localStorage.setItem('ffglory_user', JSON.stringify(response.data));
+      await authAPI.logout();
     } catch (error) {
-      console.error('Error refreshing user:', error);
-    }
-  };
-
-  const updateCredits = (amount) => {
-    if (user) {
-      const updatedUser = { ...user, credits: user.credits + amount };
-      setUser(updatedUser);
-      localStorage.setItem('ffglory_user', JSON.stringify(updatedUser));
+      console.error('Logout error:', error);
+    } finally {
+      setUser(false);
     }
   };
 
   const value = {
     user,
-    token,
     loading,
+    isAuthenticated: !!user && user !== false,
+    isAdmin: user?.role === 'admin',
     login,
     register,
     logout,
-    refreshUser,
-    updateCredits,
-    isAdmin: user?.role === 'admin'
+    checkAuth,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-};
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

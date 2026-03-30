@@ -1,45 +1,108 @@
-import React from "react";
-import "./App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { Toaster } from "./components/ui/toaster";
-import LandingPage from "./pages/LandingPage";
-import DisclaimerPage from "./pages/DisclaimerPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import DashboardPage from "./pages/DashboardPage";
-import BotControlPage from "./pages/BotControlPage";
-import BuyCreditsPage from "./pages/BuyCreditsPage";
-import AdminPage from "./pages/AdminPage";
+import React from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { Toaster } from './components/ui/sonner';
+import Navbar from './components/layout/Navbar';
+import ProtectedRoute from './components/shared/ProtectedRoute';
 
-// Protected route wrapper
-const ProtectedRoute = ({ children }) => {
-  const disclaimerAccepted = localStorage.getItem('ffglory_disclaimer_accepted');
-  if (!disclaimerAccepted) {
-    return <Navigate to="/disclaimer" replace />;
-  }
-  return children;
-};
+// Pages
+import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
+import TournamentsPage from './pages/TournamentsPage';
+import ClansPage from './pages/ClansPage';
+import LeaderboardsPage from './pages/LeaderboardsPage';
+import CommunityPage from './pages/CommunityPage';
+import SchedulePage from './pages/SchedulePage';
+import ProfilePage from './pages/ProfilePage';
+
+function AppContent() {
+  const location = useLocation();
+  const isAuthPage = ['/login', '/register', '/'].includes(location.pathname);
+
+  return (
+    <div className="min-h-screen bg-obsidian">
+      {!isAuthPage && <Navbar />}
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Protected Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tournaments"
+          element={
+            <ProtectedRoute>
+              <TournamentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/clans"
+          element={
+            <ProtectedRoute>
+              <ClansPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/leaderboards"
+          element={
+            <ProtectedRoute>
+              <LeaderboardsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/community"
+          element={
+            <ProtectedRoute>
+              <CommunityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/schedule"
+          element={
+            <ProtectedRoute>
+              <SchedulePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile/:userId"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch all - redirect to landing */}
+        <Route path="*" element={<LandingPage />} />
+      </Routes>
+      <Toaster position="bottom-right" />
+    </div>
+  );
+}
 
 function App() {
   return (
-    <AuthProvider>
-      <div className="App">
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/disclaimer" element={<DisclaimerPage />} />
-            <Route path="/login" element={<ProtectedRoute><LoginPage /></ProtectedRoute>} />
-            <Route path="/register" element={<ProtectedRoute><RegisterPage /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/bot-control" element={<ProtectedRoute><BotControlPage /></ProtectedRoute>} />
-            <Route path="/buy-credits" element={<ProtectedRoute><BuyCreditsPage /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
-          </Routes>
-        </BrowserRouter>
-        <Toaster />
-      </div>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

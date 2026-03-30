@@ -1,271 +1,324 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Progress } from '../components/ui/progress';
-import { 
-  Bot, 
-  CreditCard, 
-  TrendingUp, 
-  Activity,
-  LogOut,
-  Settings,
-  PlayCircle,
-  Home,
-  ShieldCheck
-} from 'lucide-react';
-import { botSessionsAPI, transactionsAPI } from '../services/api';
+import { motion } from 'framer-motion';
+import {
+  Trophy,
+  Users,
+  ChartBar,
+  Calendar,
+  GameController,
+  Plus,
+  ArrowRight,
+  Target,
+  TrendUp,
+  Crown,
+} from '@phosphor-icons/react';
+import { gameAPI, tournamentAPI, clanAPI, userAPI } from '../services/api';
 
-const DashboardPage = () => {
-  const navigate = useNavigate();
-  const { user, logout, isAdmin, refreshUser } = useAuth();
-  const [activeSessions, setActiveSessions] = useState([]);
-  const [recentTransactions, setRecentTransactions] = useState([]);
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const [games, setGames] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [myClans, setMyClans] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-    // Refresh user data
-    refreshUser();
-    // Poll for updates every 30 seconds
-    const interval = setInterval(loadData, 30000);
-    return () => clearInterval(interval);
+    const fetchData = async () => {
+      try {
+        const [gamesRes, tournamentsRes, clansRes] = await Promise.all([
+          gameAPI.getGames(),
+          tournamentAPI.getTournaments({ limit: 5 }),
+          userAPI.getMyClans().catch(() => ({ data: [] })),
+        ]);
+        setGames(gamesRes.data || []);
+        setTournaments(tournamentsRes.data || []);
+        setMyClans(clansRes.data || []);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  const loadData = async () => {
-    try {
-      const [sessions, transactions] = await Promise.all([
-        botSessionsAPI.getAll(),
-        transactionsAPI.getAll()
-      ]);
-      setActiveSessions(sessions.filter(s => s.status === 'running'));
-      setRecentTransactions(transactions.slice(0, 5));
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
+  const stats = [
+    {
+      label: 'Games Tracked',
+      value: user?.game_stats?.length || 0,
+      icon: GameController,
+      color: 'text-volt',
+    },
+    {
+      label: 'Clans Joined',
+      value: myClans.length,
+      icon: Users,
+      color: 'text-success',
+    },
+    {
+      label: 'Tournaments',
+      value: 0,
+      icon: Trophy,
+      color: 'text-warning',
+    },
+    {
+      label: 'Total Wins',
+      value: user?.game_stats?.reduce((acc, gs) => acc + (gs.stats?.wins || 0), 0) || 0,
+      icon: Crown,
+      color: 'text-blaze',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <Bot className="w-8 h-8 text-orange-500" />
-              <span className="text-xl font-bold text-white">Glory Bot</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" className="text-slate-300 hover:text-white" onClick={() => navigate('/')}>
-                <Home className="w-4 h-4 mr-2" />
-                Home
-              </Button>
-              {isAdmin && (
-                <Button variant="ghost" className="text-purple-400 hover:text-purple-300" onClick={() => navigate('/admin')}>
-                  <ShieldCheck className="w-4 h-4 mr-2" />
-                  Admin
-                </Button>
-              )}
-              <Button variant="ghost" className="text-slate-300 hover:text-white" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-obsidian pt-20 pb-12" data-testid="dashboard-page">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Welcome Header */}
+        <div className="mb-8">
+          <h1 className="font-display text-3xl md:text-4xl mb-2">
+            WELCOME BACK, <span className="text-volt">{user?.name?.toUpperCase()}</span>
+          </h1>
+          <p className="text-secondary">
+            Here's your gaming overview
+          </p>
         </div>
-      </nav>
 
-      <div className="pt-24 pb-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Welcome back, {user.name}!</h1>
-            <p className="text-slate-400">Manage your glory farming operations from here</p>
-          </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-surface border border-white/10 p-6"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <Icon size={24} weight="duotone" className={stat.color} />
+                  <TrendUp size={16} className="text-success" />
+                </div>
+                <div className="font-mono text-3xl font-bold mb-1">{stat.value}</div>
+                <div className="text-xs uppercase tracking-wider text-secondary">{stat.label}</div>
+              </motion.div>
+            );
+          })}
+        </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-orange-600 to-orange-700 border-0">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <CreditCard className="w-8 h-8 text-white/80" />
-                  <Badge className="bg-white/20 text-white">Available</Badge>
-                </div>
-                <div className="text-3xl font-bold text-white mb-1">{user.credits}</div>
-                <div className="text-sm text-white/80">Credits</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-0">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <TrendingUp className="w-8 h-8 text-white/80" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-1">
-                  {(user.totalGloryEarned / 1000000).toFixed(1)}M
-                </div>
-                <div className="text-sm text-white/80">Total Glory Earned</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-0">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <Bot className="w-8 h-8 text-white/80" />
-                  <Badge className="bg-green-500/20 text-white border-0">
-                    <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                    Active
-                  </Badge>
-                </div>
-                <div className="text-3xl font-bold text-white mb-1">{activeSessions.length}</div>
-                <div className="text-sm text-white/80">Active Sessions</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <Activity className="w-8 h-8 text-white/80" />
-                </div>
-                <div className="text-3xl font-bold text-white mb-1">
-                  {activeSessions.reduce((acc, s) => acc + s.botCount, 0)}
-                </div>
-                <div className="text-sm text-white/80">Bots Running</div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <Card className="bg-slate-900/50 border-slate-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <PlayCircle className="w-5 h-5 mr-2" />
-                  Start New Session
-                </CardTitle>
-                <CardDescription className="text-slate-400">
-                  Launch bots to farm glory for your clan
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                  onClick={() => navigate('/bot-control')}
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Game Stats Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Quick Actions */}
+            <div className="bg-surface border border-white/10 p-6">
+              <h2 className="font-display text-xl mb-4">QUICK ACTIONS</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Link
+                  to="/tournaments/create"
+                  className="flex flex-col items-center gap-2 p-4 bg-obsidian border border-white/10 hover:border-volt transition-colors"
+                  data-testid="quick-action-create-tournament"
                 >
-                  Start Farming
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-slate-900/50 border-slate-800">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  Buy Credits
-                </CardTitle>
-                <CardDescription className="text-slate-400">
-                  Purchase more credits to continue farming
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  onClick={() => navigate('/buy-credits')}
+                  <Trophy size={24} className="text-volt" />
+                  <span className="text-xs uppercase tracking-wider">Create Tournament</span>
+                </Link>
+                <Link
+                  to="/clans/create"
+                  className="flex flex-col items-center gap-2 p-4 bg-obsidian border border-white/10 hover:border-volt transition-colors"
+                  data-testid="quick-action-create-clan"
                 >
-                  Add Credits
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+                  <Users size={24} className="text-volt" />
+                  <span className="text-xs uppercase tracking-wider">Create Clan</span>
+                </Link>
+                <Link
+                  to="/profile/edit"
+                  className="flex flex-col items-center gap-2 p-4 bg-obsidian border border-white/10 hover:border-volt transition-colors"
+                  data-testid="quick-action-add-stats"
+                >
+                  <ChartBar size={24} className="text-volt" />
+                  <span className="text-xs uppercase tracking-wider">Add Stats</span>
+                </Link>
+                <Link
+                  to="/community/create"
+                  className="flex flex-col items-center gap-2 p-4 bg-obsidian border border-white/10 hover:border-volt transition-colors"
+                  data-testid="quick-action-create-post"
+                >
+                  <Plus size={24} className="text-volt" />
+                  <span className="text-xs uppercase tracking-wider">Create Post</span>
+                </Link>
+              </div>
+            </div>
 
-          {/* Active Sessions */}
-          {activeSessions.length > 0 && (
-            <Card className="bg-slate-900/50 border-slate-800 mb-8">
-              <CardHeader>
-                <CardTitle className="text-white">Active Sessions</CardTitle>
-                <CardDescription className="text-slate-400">Currently running bot sessions</CardDescription>
-              </CardHeader>
-              <CardContent>
+            {/* Game Stats */}
+            <div className="bg-surface border border-white/10 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display text-xl">YOUR GAME STATS</h2>
+                <Link to="/profile/edit" className="text-volt text-sm hover:underline flex items-center gap-1">
+                  Add Game <Plus size={16} />
+                </Link>
+              </div>
+
+              {user?.game_stats?.length > 0 ? (
                 <div className="space-y-4">
-                  {activeSessions.map((session) => {
-                    const progress = Math.min((session.gloryEarned / 5000000) * 100, 100);
-                    const timeElapsed = Math.floor((Date.now() - new Date(session.startTime).getTime()) / 60000);
-                    
-                    return (
-                      <div key={session.id} className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <div className="font-semibold text-white">Clan ID: {session.clanId}</div>
-                            <div className="text-sm text-slate-400">Region: {session.region} | {session.botCount} Bots</div>
-                          </div>
-                          <Badge className="bg-green-600/20 text-green-400 border-green-600/50">
-                            <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                            Running {timeElapsed}m
-                          </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-slate-400">Glory Earned</span>
-                            <span className="text-white font-semibold">{(session.gloryEarned / 1000000).toFixed(2)}M</span>
-                          </div>
-                          <Progress value={progress} className="h-2" />
-                          <div className="flex justify-between text-xs text-slate-400">
-                            <span>{session.gloryPerHour / 1000}k Glory/Hour</span>
-                            <span>Target: 5M</span>
+                  {user.game_stats.map((gameStat, index) => (
+                    <div
+                      key={index}
+                      className="bg-obsidian border border-white/10 p-4 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-4">
+                        <GameController size={32} className="text-volt" />
+                        <div>
+                          <div className="font-medium">{gameStat.game_name}</div>
+                          <div className="text-sm text-secondary">
+                            {gameStat.username} • Level {gameStat.level || 'N/A'}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="text-right">
+                        <div className="font-mono text-lg">{gameStat.rank || 'Unranked'}</div>
+                        <div className="text-xs text-secondary">
+                          {gameStat.stats?.kills || 0} Kills • {gameStat.stats?.wins || 0} Wins
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="text-center py-12 text-secondary">
+                  <GameController size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="mb-4">No game stats added yet</p>
+                  <Link to="/profile/edit" className="btn-primary px-6 py-2 inline-block">
+                    Add Your First Game
+                  </Link>
+                </div>
+              )}
+            </div>
 
-          {/* Recent Transactions */}
-          <Card className="bg-slate-900/50 border-slate-800">
-            <CardHeader>
-              <CardTitle className="text-white">Recent Transactions</CardTitle>
-              <CardDescription className="text-slate-400">Your latest credit activity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentTransactions.map((txn) => (
-                  <div key={txn.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
-                    <div>
-                      <div className="font-medium text-white">
-                        {txn.type === 'credit_purchase' ? 'Credit Purchase' : 'Credit Used'}
+            {/* Active Tournaments */}
+            <div className="bg-surface border border-white/10 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display text-xl">UPCOMING TOURNAMENTS</h2>
+                <Link to="/tournaments" className="text-volt text-sm hover:underline flex items-center gap-1">
+                  View All <ArrowRight size={16} />
+                </Link>
+              </div>
+
+              {tournaments.length > 0 ? (
+                <div className="space-y-3">
+                  {tournaments.slice(0, 3).map((tournament) => (
+                    <Link
+                      key={tournament.id}
+                      to={`/tournaments/${tournament.id}`}
+                      className="block bg-obsidian border border-white/10 p-4 hover:border-volt transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium mb-1">{tournament.name}</div>
+                          <div className="text-sm text-secondary">
+                            {tournament.game_name} • {tournament.registered_teams}/{tournament.max_teams} Teams
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`badge ${
+                            tournament.status === 'registration' ? 'badge-upcoming' :
+                            tournament.status === 'in_progress' ? 'badge-live' :
+                            'badge-completed'
+                          }`}>
+                            {tournament.status}
+                          </span>
+                          {tournament.prize_pool > 0 && (
+                            <div className="text-sm text-warning mt-1 font-mono">
+                              ${tournament.prize_pool}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-sm text-slate-400">
-                        {new Date(txn.timestamp).toLocaleDateString()}
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-secondary">
+                  <Trophy size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>No tournaments available</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Sidebar */}
+          <div className="space-y-6">
+            {/* My Clans */}
+            <div className="bg-surface border border-white/10 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display text-xl">MY CLANS</h2>
+                <Link to="/clans" className="text-volt text-sm hover:underline">
+                  Browse
+                </Link>
+              </div>
+
+              {myClans.length > 0 ? (
+                <div className="space-y-3">
+                  {myClans.map((clan) => (
+                    <Link
+                      key={clan.id}
+                      to={`/clans/${clan.id}`}
+                      className="flex items-center gap-3 p-3 bg-obsidian border border-white/10 hover:border-volt transition-colors"
+                    >
+                      <div className="w-10 h-10 bg-volt/20 flex items-center justify-center font-display text-volt">
+                        {clan.tag}
                       </div>
-                    </div>
-                    <div className={`font-semibold ${txn.credits > 0 ? 'text-green-400' : 'text-orange-400'}`}>
-                      {txn.credits > 0 ? '+' : ''}{txn.credits} Credits
-                    </div>
+                      <div>
+                        <div className="font-medium">{clan.name}</div>
+                        <div className="text-xs text-secondary">
+                          {clan.member_count} members
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-secondary">
+                  <Users size={32} className="mx-auto mb-3 opacity-50" />
+                  <p className="text-sm mb-3">You haven't joined any clans</p>
+                  <Link to="/clans" className="text-volt text-sm hover:underline">
+                    Find a Clan
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Supported Games */}
+            <div className="bg-surface border border-white/10 p-6">
+              <h2 className="font-display text-xl mb-4">SUPPORTED GAMES</h2>
+              <div className="grid grid-cols-2 gap-2">
+                {games.slice(0, 6).map((game) => (
+                  <div
+                    key={game.id}
+                    className="flex items-center gap-2 p-3 bg-obsidian border border-white/10"
+                  >
+                    <GameController size={16} className="text-volt" />
+                    <span className="text-sm truncate">{game.name}</span>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Upcoming Events */}
+            <div className="bg-surface border border-white/10 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-display text-xl">SCHEDULE</h2>
+                <Link to="/schedule" className="text-volt text-sm hover:underline">
+                  View All
+                </Link>
+              </div>
+              <div className="text-center py-8 text-secondary">
+                <Calendar size={32} className="mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No upcoming events</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-};
-
-export default DashboardPage;
+}
