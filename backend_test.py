@@ -11,7 +11,7 @@ from datetime import datetime
 import uuid
 
 # Backend URL from frontend environment
-BASE_URL = "https://bot-glory-grind.preview.emergentagent.com/api"
+BASE_URL = "https://service-233.preview.emergentagent.com/api"
 
 class FFGloryBotTester:
     def __init__(self):

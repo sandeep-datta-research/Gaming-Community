@@ -1,0 +1,124 @@
+{
+  "theme": "dark",
+  "archetype": "Archetype 2: Performance Pro",
+  "mood": "Tactical Command Center, Competitive Elite Athleticism, High-Energy, Precision",
+  "core_principles": [
+    "Context is King: Dashboards must feel like a pilot's control room (dense, precise); Marketing pages must feel like a stadium event (loud, immersive).",
+    "Contrast over Softness: No muddy grays. Use pure blacks, stark whites, and electrifying accent colors.",
+    "Technical Brutalism: Expose grids, use 1px solid borders instead of soft shadows.",
+    "Data as Art: Leaderboards and tournament brackets are the focal points of the UI, not afterthoughts."
+  ],
+  "colors": {
+    "background": {
+      "default": "#0A0A0A",
+      "surface": "#121212",
+      "surface_elevated": "#1A1A1A"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A1A1AA",
+      "muted": "#71717A"
+    },
+    "brand": {
+      "primary": "#007AFF",
+      "primary_hover": "#005BB5",
+      "accent": "#FF3B30",
+      "success": "#34C759",
+      "warning": "#FF9F0A"
+    },
+    "border": {
+      "default": "rgba(255, 255, 255, 0.1)",
+      "focus": "#007AFF"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "display": "Bebas Neue",
+      "body": "Outfit",
+      "mono": "JetBrains Mono"
+    },
+    "rules": {
+      "headings": "NEVER use default sans-serif for headings. Bebas Neue must be used for H1/H2 to create a heavyweight, athletic feel. Always use uppercase.",
+      "tracking": "Display fonts must have tracking-normal or tracking-tight. Overlines/labels must be tracking-[0.2em].",
+      "body": "Outfit is geometric and clean, providing maximum legibility for dense dashboard metrics."
+    },
+    "scales": {
+      "h1": "text-5xl md:text-6xl+ uppercase tracking-tight",
+      "h2": "text-3xl md:text-4xl uppercase tracking-tight",
+      "h3": "text-xl md:text-2xl font-bold uppercase",
+      "body": "text-base leading-relaxed",
+      "label": "text-xs tracking-[0.2em] uppercase font-bold text-[#A1A1AA]"
+    }
+  },
+  "layout_and_spacing": {
+    "strategy": "Generous Spacing Philosophy combined with strict Grid alignment.",
+    "grids": {
+      "marketing": "Mode A: The 'Tetris' Grid (grid-cols-1 md:grid-cols-8 lg:grid-cols-12). Wide gaps (gap-8 or gap-12). Aggressive asymmetry. Do not perfectly fill rows.",
+      "dashboard": "Mode B: The 'Control Room' Grid (grid-cols-1 md:grid-cols-3 lg:grid-cols-4). Tight gaps (gap-4 or gap-6). Dense widget layout. Utilize every pixel."
+    },
+    "borders": "Expose the grid. Use border-r border-b border-white/10 on grid items to create a 'Technical Look' across dashboards."
+  },
+  "surfaces_and_components": {
+    "cards": "Flat solid background (bg-[#121212]), sharp edges or max 4px radius (rounded-none or rounded-sm). 1px subtle border. NO soft drop shadows. On hover: slight upward transform (-translate-y-1) and border shifts to primary blue.",
+    "buttons": "Primary: Solid #007AFF, pure white text, uppercase, tracking-widest, sharp corners. Hover state MUST invert or intensify (e.g., bg-white text-black). Secondary: Transparent with 1px solid white/20 border.",
+    "inputs": "Shadcn based. bg-[#0A0A0A], border-white/20, text-white. Sharp corners. Focus state: ring-2 ring-[#007AFF] border-transparent.",
+    "headers": "Sticky or fixed navigation. Must have background (e.g., bg-[#0A0A0A]/80 backdrop-blur-xl). Never leave it fully transparent over content.",
+    "tables_leaderboards": "Dense, highly structured. Left-align text data, right-align numerical stats. Use JetBrains Mono for numbers to ensure tabular lining.",
+    "tournament_brackets": "Connect matches with 1px solid lines (border-white/20). Active/live matches pulse with primary blue or accent red."
+  },
+  "motion_and_interactions": {
+    "hover_states": "All interactive elements must have defined hover states. Text color must be explicitly set on hover.",
+    "focus_states": "High contrast ring. focus:ring-2 focus:ring-[#007AFF].",
+    "animations": "Minimalist and precise. Micro-interactions for button presses. No slow fades. Use framer-motion for bracket transitions."
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "style": "Duotone or bold weight for active navigation, regular for dense dashboard tables."
+  },
+  "media_and_images": {
+    "overlay_rule": "Hero overlays must be max bg-black/50 or use a gradient to transparent. Never completely black out an image.",
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1767455471543-055dbc6c6700?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwzfHxlc3BvcnRzJTIwYXJlbmF8ZW58MHx8fHwxNzc0ODMzMDgyfDA&ixlib=rb-4.1.0&q=85",
+        "category": "hero_background",
+        "description": "Blue banners with team logos at an esports event. Use for Landing Page Hero section."
+      },
+      {
+        "url": "https://images.pexels.com/photos/7773546/pexels-photo-7773546.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "gamer_portfolio",
+        "description": "Young man with a game controller against a neon backdrop. Use for Portfolio/Profile placeholders."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1759701547467-a54a5e86a4f0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHw0fHxlc3BvcnRzJTIwYXJlbmF8ZW58MHx8fHwxNzc0ODMzMDgyfDA&ixlib=rb-4.1.0&q=85",
+        "category": "clan_team",
+        "description": "Red and black esports jersey portrait. Use for Clan Management or Team Member showcases."
+      },
+      {
+        "url": "https://images.pexels.com/photos/6125330/pexels-photo-6125330.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "dashboard_stats_bg",
+        "description": "Active esports gaming studio with players. Use as a subtle, darkened background texture for the Game Community or Stats sections."
+      },
+      {
+        "url": "https://images.pexels.com/photos/5445632/pexels-photo-5445632.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "tournament_abstract",
+        "description": "Colorful abstract patterns. Use for Tournament Organizer cover image or empty states."
+      }
+    ]
+  },
+  "testing": {
+    "rules": [
+      "All interactive and key informational elements MUST include a data-testid attribute.",
+      "Use kebab-case, role-based names (e.g., data-testid='hero-cta-button', data-testid='tournament-bracket-node')."
+    ]
+  },
+  "instructions_to_main_agent": [
+    "1. Read this entire JSON file thoroughly. You MUST strictly adhere to the Performance Pro Archetype.",
+    "2. For marketing pages, avoid standard Shadcn Card components. Use pure HTML/Tailwind to create sharp, asymmetrical 'Tetris Grid' layouts.",
+    "3. For the dashboard sections (Game Stats, Clan Management, Tournaments), use heavily customized Shadcn components (strip out soft borders, remove rounded corners, add 1px sharp borders).",
+    "4. Ensure Bebas Neue is applied to all major headings and Outfit for body text. Install these via Google Fonts.",
+    "5. Install and use @phosphor-icons/react for all icons.",
+    "6. Every clickable item and form element must have a data-testid attribute.",
+    "7. DO NOT USE ANY PLACEHOLDER IMAGES (like via.placeholder.com). ONLY use the URLs provided in the media_and_images section.",
+    "8. Set up the Tailwind configuration to include the custom colors defined here: bg-obsidian (#0A0A0A), text-pure (#FFFFFF), accent-volt (#007AFF), accent-blaze (#FF3B30)."
+  ]
+}

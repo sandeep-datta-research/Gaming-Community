@@ -175,7 +175,7 @@ backend:
     status_history:
         - working: true
           agent: "testing"
-          comment: "✅ API health check working - returns proper status message 'FF Glory Bot API v1.0'. ✅ CORS configuration working correctly. ✅ All endpoints accessible via external URL https://bot-glory-grind.preview.emergentagent.com/api."
+          comment: "✅ API health check working - returns proper status message 'FF Glory Bot API v1.0'. ✅ CORS configuration working correctly. ✅ All endpoints accessible via external URL https://service-233.preview.emergentagent.com/api."
 
 frontend:
   # No frontend testing performed as per instructions
